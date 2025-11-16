@@ -366,22 +366,52 @@ void *LES_background_read(LESHandle i) {
         }
         fseek(fid, offset, SEEK_SET);
         // Timestamp of the frame
-        fread(table->data.a, sizeof(float), 1, fid);
+        size_t items_read = fread(table->data.a, sizeof(float), 1, fid);
+        if (items_read != 1) {
+            fprintf(stderr, "%s : LES : Error: Failed to read timestamp from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(uint32_t), SEEK_CUR);
         // Wind u
-        fread(table->data.u, sizeof(float), table->nn, fid);
+        items_read = fread(table->data.u, sizeof(float), table->nn, fid);
+        if (items_read != table->nn) {
+            fprintf(stderr, "%s : LES : Error: Failed to read u data from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(int32_t), SEEK_CUR);
         // Wind v
-        fread(table->data.v, sizeof(float), table->nn, fid);
+        items_read = fread(table->data.v, sizeof(float), table->nn, fid);
+        if (items_read != table->nn) {
+            fprintf(stderr, "%s : LES : Error: Failed to read v data from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(int32_t), SEEK_CUR);
         // Wind w
-        fread(table->data.w, sizeof(float), table->nn, fid);
+        items_read = fread(table->data.w, sizeof(float), table->nn, fid);
+        if (items_read != table->nn) {
+            fprintf(stderr, "%s : LES : Error: Failed to read w data from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(int32_t), SEEK_CUR);
         // Pressure p
-        fread(table->data.p, sizeof(float), table->nn, fid);
+        items_read = fread(table->data.p, sizeof(float), table->nn, fid);
+        if (items_read != table->nn) {
+            fprintf(stderr, "%s : LES : Error: Failed to read p data from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(int32_t), SEEK_CUR);
         // Something t
-        fread(table->data.t, sizeof(float), table->nn, fid);
+        items_read = fread(table->data.t, sizeof(float), table->nn, fid);
+        if (items_read != table->nn) {
+            fprintf(stderr, "%s : LES : Error: Failed to read t data from file\n", now());
+            fclose(fid);
+            return NULL;
+        }
         fseek(fid, 2 * sizeof(int32_t), SEEK_CUR);
         fclose(fid);
 
@@ -488,7 +518,13 @@ LESGrid *LES_enclosing_grid_create_from_file(const char *filename) {
 		return NULL;
 	}
     // First 4 uint32_t describes the dimensions
-	fread(grid, 1, 4 * sizeof(uint32_t), fid);
+	size_t items_read = fread(grid, 1, 4 * sizeof(uint32_t), fid);
+	if (items_read != 4 * sizeof(uint32_t)) {
+		fprintf(stderr, "Error reading grid dimensions from file %s\n", filename);
+		fclose(fid);
+		free(grid);
+		return NULL;
+	}
 	// Now, we know how many the cell counts
 	size_t count = grid->nx * grid->ny * grid->nz;
     // Allocate spaces for the data
@@ -497,14 +533,43 @@ LESGrid *LES_enclosing_grid_create_from_file(const char *filename) {
 	grid->z = (float *)malloc(count * sizeof(float));
 	if (grid->x == NULL || grid->y == NULL || grid->z == NULL) {
 		fprintf(stderr, "Error allocating memory for grid values.\n");
+		fclose(fid);
+		free(grid);
 		return NULL;
 	}
 	fseek(fid, 2 * sizeof(float), SEEK_CUR);
-	fread(grid->x, sizeof(float), count, fid);
+	items_read = fread(grid->x, sizeof(float), count, fid);
+	if (items_read != count) {
+		fprintf(stderr, "Error reading grid X values from file %s\n", filename);
+		fclose(fid);
+		free(grid->x);
+		free(grid->y);
+		free(grid->z);
+		free(grid);
+		return NULL;
+	}
 	fseek(fid, 2 * sizeof(float), SEEK_CUR);
-	fread(grid->y, sizeof(float), count, fid);
+	items_read = fread(grid->y, sizeof(float), count, fid);
+	if (items_read != count) {
+		fprintf(stderr, "Error reading grid Y values from file %s\n", filename);
+		fclose(fid);
+		free(grid->x);
+		free(grid->y);
+		free(grid->z);
+		free(grid);
+		return NULL;
+	}
 	fseek(fid, 2 * sizeof(float), SEEK_CUR);
-	fread(grid->z, sizeof(float), count, fid);
+	items_read = fread(grid->z, sizeof(float), count, fid);
+	if (items_read != count) {
+		fprintf(stderr, "Error reading grid Z values from file %s\n", filename);
+		fclose(fid);
+		free(grid->x);
+		free(grid->y);
+		free(grid->z);
+		free(grid);
+		return NULL;
+	}
 	fclose(fid);
 	
     #ifdef DEBUG_LES

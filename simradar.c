@@ -86,7 +86,11 @@ void show_help() {
     int k;
     int size = 10 * 1024;
     char *buff = (char *)malloc(size);
-    k = sprintf(buff, "SimRadar\n\n"
+    if (buff == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory for help text\n");
+        return;
+    }
+    k = snprintf(buff, size, "SimRadar\n\n"
            PROGNAME " [options]\n\n"
            "OPTIONS\n"
            "     Unless specifically stated, all options are interpreted in sequence. Some\n"
@@ -125,9 +129,9 @@ void show_help() {
            "         Debris type is as follows:\n"
            );
     for (int i = 1; i < OBJConfigCount; i++) {
-        k += sprintf(buff + k, "            o  %d - %s\n", i, OBJConfigString(i));
+        k += snprintf(buff + k, size - k, "            o  %d - %s\n", i, OBJConfigString(i));
     }
-    k += sprintf(buff + k, "\n"
+    k += snprintf(buff + k, size - k, "\n"
            "  -D (--density) " UNDERLINE("D") "\n"
            "         Set the density of particles to " UNDERLINE("D") " scatterers per resolution volume\n"
            "\n"
@@ -318,7 +322,7 @@ static void show_user_param(const char *name, const void* value, const char *uni
             break;
         case ValueTypeBool:
             if (*(char *)value) {
-                strcpy(value_str, "true");
+                snprintf(value_str, sizeof(value_str), "true");
             }
         case ValueTypeFloatArray:
             fp = (float *)value;
@@ -400,7 +404,12 @@ int get_last_seed(const char *output_dir) {
             continue;
         }
         filelist[k] = (char *)malloc(strlen(dir->d_name) + 1);
-        strcpy(filelist[k], dir->d_name);
+        if (filelist[k] == NULL) {
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            closedir(d);
+            return EXIT_FAILURE;
+        }
+        strncpy(filelist[k], dir->d_name, strlen(dir->d_name) + 1);
         k++;
         if (k > MAX_FILELIST) {
             fprintf(stderr, "Too many files in the directory.\n");
@@ -419,7 +428,7 @@ int get_last_seed(const char *output_dir) {
     qsort(filelist, k, sizeof(char *), cstring_cmp);
 
     // Pick the last file
-    sprintf(filename, "%s/%s", path, filelist[k - 1]);
+    snprintf(filename, sizeof(filename), "%s/%s", path, filelist[k - 1]);
     if (stat(filename, &file_stat) < 0) {
         printf("%s\n", strerror(errno));
     }
@@ -599,7 +608,8 @@ int main(int argc, char *argv[]) {
                 break;
             case 'g':
                 //k = sscanf(optarg, "%c:%f:%f:%f", &c1, &f1, &f2, &f3);
-                strcpy(charbuff, optarg);
+                strncpy(charbuff, optarg, sizeof(charbuff) - 1);
+                charbuff[sizeof(charbuff) - 1] = '\0';
                 k = 0;
                 pc2 = optarg - 1;
                 do {
@@ -736,8 +746,8 @@ int main(int argc, char *argv[]) {
         char name[64];
         char type[64];
         for (k = 0; k < user.debris_group_count; k++) {
-            sprintf(name, "Debris [%d]", k);
-            sprintf(type, "%s @", OBJConfigString(user.debris_type[k]));
+            snprintf(name, sizeof(name), "Debris [%d]", k);
+            snprintf(type, sizeof(type), "%s @", OBJConfigString(user.debris_type[k]));
             show_user_param(name, type, commaint(user.debris_count[k]), ValueTypeChar, 0);
         }
         printf("----------------------------------------------\n");
@@ -979,7 +989,8 @@ int main(int argc, char *argv[]) {
     if (user.warm_up_pulses > 0) {
         // Set a longer PRT for particles to move more
         RS_set_prt(S, 1.0f / 60.0f);
-        strcpy(charbuff, commaint(user.warm_up_pulses));
+        strncpy(charbuff, commaint(user.warm_up_pulses), sizeof(charbuff) - 1);
+        charbuff[sizeof(charbuff) - 1] = '\0';
         gettimeofday(&t1, NULL);
         for (k = 0; k < user.warm_up_pulses; k++) {
             // Skip computing progress if we are not showing progress
