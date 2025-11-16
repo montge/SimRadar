@@ -21,6 +21,9 @@
 #include <getopt.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <limits.h>
 
 #define MAX_FILELIST                65536
 
@@ -1001,8 +1004,34 @@ int main(int argc, char *argv[]) {
     // ---------------------------------------------------------------------------------------------------------------
 
     // Allocate a pulse cache
+    // Check for integer overflow in allocation size calculation
+    if (user.num_pulses > SIZE_MAX / sizeof(IQPulseHeader)) {
+        fprintf(stderr, "%s : Error: Pulse count too large (integer overflow in allocation)\n", now());
+        RS_free(S);
+        return EXIT_FAILURE;
+    }
+
+    if (user.num_pulses > SIZE_MAX / (S->params.range_count * sizeof(cl_float4))) {
+        fprintf(stderr, "%s : Error: Pulse count too large (integer overflow in allocation)\n", now());
+        RS_free(S);
+        return EXIT_FAILURE;
+    }
+
     IQPulseHeader *pulse_headers = (IQPulseHeader *)malloc(user.num_pulses * sizeof(IQPulseHeader));
+    if (pulse_headers == NULL) {
+        fprintf(stderr, "%s : Error: Failed to allocate memory for pulse headers\n", now());
+        RS_free(S);
+        return EXIT_FAILURE;
+    }
+
     cl_float4 *pulse_cache = (cl_float4 *)malloc(user.num_pulses * S->params.range_count * sizeof(cl_float4));
+    if (pulse_cache == NULL) {
+        fprintf(stderr, "%s : Error: Failed to allocate memory for pulse cache\n", now());
+        free(pulse_headers);
+        RS_free(S);
+        return EXIT_FAILURE;
+    }
+
     memset(pulse_headers, 0, user.num_pulses * sizeof(IQPulseHeader));
     memset(pulse_cache, 0, user.num_pulses * S->params.range_count * sizeof(cl_float4));
     
@@ -1122,20 +1151,56 @@ int main(int argc, char *argv[]) {
     }
 
     if (strlen(user.output_dir) == 0) {
-        snprintf(user.output_dir, sizeof(user.output_dir), "%s/Downloads", getenv("HOME"));
+        const char *home = getenv("HOME");
+        if (home == NULL) {
+            fprintf(stderr, "%s : Error: HOME environment variable not set\n", now());
+            RS_free(S);
+            return EXIT_FAILURE;
+        }
+        snprintf(user.output_dir, sizeof(user.output_dir), "%s/Downloads", home);
     } else {
         size_t len = strlen(user.output_dir);
         if (user.output_dir[len - 1] == '/') {
             user.output_dir[len - 1] = '\0';
         }
-        // Check if directory exists
-        struct stat dir_stat;
-        char os_cmd[1024];
-        snprintf(os_cmd, 1024, "mkdir -p \"%s\"", user.output_dir);
-        printf("%s : %s\n", now(), os_cmd);
-        if (stat(user.output_dir, &dir_stat) < 0) {
-            system(os_cmd);
+    }
+
+    // Create output directory if it doesn't exist
+    // Use mkdir() syscall instead of system() to prevent command injection
+    struct stat dir_stat;
+    if (stat(user.output_dir, &dir_stat) < 0) {
+        // Directory doesn't exist, create it
+        // Note: mkdir() only creates one level, so we need to create parent directories
+        char path_copy[PATH_MAX];
+        strncpy(path_copy, user.output_dir, sizeof(path_copy) - 1);
+        path_copy[sizeof(path_copy) - 1] = '\0';
+
+        // Create parent directories if needed
+        char *p = path_copy;
+        if (*p == '/') p++; // Skip leading slash
+
+        for (; *p; p++) {
+            if (*p == '/') {
+                *p = '\0';
+                if (mkdir(path_copy, 0755) != 0 && errno != EEXIST) {
+                    fprintf(stderr, "%s : Error: Failed to create directory '%s': %s\n",
+                            now(), path_copy, strerror(errno));
+                    RS_free(S);
+                    return EXIT_FAILURE;
+                }
+                *p = '/';
+            }
         }
+
+        // Create the final directory
+        if (mkdir(path_copy, 0755) != 0 && errno != EEXIST) {
+            fprintf(stderr, "%s : Error: Failed to create directory '%s': %s\n",
+                    now(), path_copy, strerror(errno));
+            RS_free(S);
+            return EXIT_FAILURE;
+        }
+
+        printf("%s : Created output directory: %s\n", now(), user.output_dir);
     }
     
     if (user.output_iq_file) {

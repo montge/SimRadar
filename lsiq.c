@@ -11,6 +11,7 @@
 #include "iq.h"
 
 #include <errno.h>
+#include <string.h>
 
 #include <dirent.h>
 
@@ -42,14 +43,19 @@ int main(int argc, char **argv) {
     }
     
     if (argc == 1) {
-        sprintf(path, ".");
+        snprintf(path, sizeof(path), ".");
     } else {
         if (argv[1][0] == '~') {
-            strcpy(path, getenv("HOME"));
-            strcat(path, &argv[1][1]);
+            const char *home = getenv("HOME");
+            if (home == NULL) {
+                fprintf(stderr, "Error: HOME environment variable not set\n");
+                return EXIT_FAILURE;
+            }
+            snprintf(path, sizeof(path), "%s%s", home, &argv[1][1]);
             printf("path = %s\n", path);
         } else {
-            strcpy(path, argv[1]);
+            strncpy(path, argv[1], sizeof(path) - 1);
+            path[sizeof(path) - 1] = '\0';
         }
     }
     
@@ -72,10 +78,16 @@ int main(int argc, char **argv) {
             continue;
         }
         filelist[k] = (char *)malloc(strlen(dir->d_name) + 1);
-        strcpy(filelist[k], dir->d_name);
+        if (filelist[k] == NULL) {
+            fprintf(stderr, "Error: Memory allocation failed\n");
+            closedir(d);
+            return EXIT_FAILURE;
+        }
+        strncpy(filelist[k], dir->d_name, strlen(dir->d_name) + 1);
         k++;
         if (k > MAX_FILELIST) {
             fprintf(stderr, "Too many files in the directory.\n");
+            closedir(d);
             return EXIT_FAILURE;
         }
     }
@@ -96,12 +108,25 @@ int main(int argc, char **argv) {
     uint32_t prev_seed = 0;
     
     for (k = 0; k < nfiles; k++) {
-        sprintf(filename, "%s/%s", path, filelist[k]);
+        snprintf(filename, sizeof(filename), "%s/%s", path, filelist[k]);
         if (stat(filename, &file_stat) < 0) {
             printf("%s\n", strerror(errno));
+            free(filelist[k]);
+            continue;
         }
         f = fopen(filename, "r+");
-        fread(&file_header, sizeof(file_header), 1, f);
+        if (f == NULL) {
+            fprintf(stderr, "Error: Could not open file %s: %s\n", filename, strerror(errno));
+            free(filelist[k]);
+            continue;
+        }
+        size_t items_read = fread(&file_header, sizeof(file_header), 1, f);
+        if (items_read != 1) {
+            fprintf(stderr, "Error: Failed to read file header from %s\n", filename);
+            fclose(f);
+            free(filelist[k]);
+            continue;
+        }
         printf("%s   %6s B   %d  (+%u)\n", filelist[k], commaint(file_stat.st_size), file_header.simulation_seed, file_header.simulation_seed - prev_seed);
 //        file_header.simulation_seed = k + 1825;
 //        rewind(f);

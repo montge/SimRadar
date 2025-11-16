@@ -21,7 +21,9 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#if defined(__APPLE__) || defined(_DARWIN_C_SOURCE)
 #include <sys/sysctl.h>
+#endif
 
 #include "rs_const.h"
 
