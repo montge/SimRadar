@@ -1,0 +1,98 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install Doxygen and Graphviz
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Generate Doxygen documentation
+      run: |
+        doxygen Doxyfile
+        # Create .nojekyll to prevent GitHub Pages from ignoring files starting with _
+        touch docs/html/.nojekyll
+
+    - name: Create index redirect
+      run: |
+        # Create root index.html that redirects to docs/html/index.html
+        cat > docs/html/index_redirect.html << 'HTMLEOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>SimRadar API Documentation</title>
+          <meta http-equiv="refresh" content="0; url=./index.html">
+          <link rel="canonical" href="./index.html">
+        </head>
+        <body>
+          <p>Redirecting to <a href="./index.html">SimRadar API Documentation</a>...</p>
+        </body>
+        </html>
+        HTMLEOF
+
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: api-docs
+        path: docs/html/
+        retention-days: 90
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: docs/html/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+
+    - name: Comment on commit
+      if: github.event_name == 'push'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const deployUrl = `https://${context.repo.owner}.github.io/${context.repo.repo}/`;
+
+          github.rest.repos.createCommitComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: context.sha,
+            body: `📚 API Documentation deployed to ${deployUrl}\n\nGenerated from commit ${context.sha.substring(0, 7)}`
+          });
+
+    - name: Display summary
+      run: |
+        echo "## 📚 Documentation Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Doxygen documentation generated successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Statistics:**" >> $GITHUB_STEP_SUMMARY
+        echo "- HTML files: $(find docs/html -name '*.html' | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Total files: $(find docs/html -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Disk usage: $(du -sh docs/html | cut -f1)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Deployment URL:** https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> $GITHUB_STEP_SUMMARY
