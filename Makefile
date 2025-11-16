@@ -57,7 +57,7 @@ endif
 LDFLAGS += -lm -lpthread
 
 # Test programs
-TEST_PROGS = tests/test_string_safety tests/test_pos_parsing
+TEST_PROGS = tests/test_string_safety tests/test_pos_parsing tests/test_rs_tables tests/test_data_loaders
 TEST_CFLAGS = $(CFLAGS) -I.
 
 all: $(MYLIB) $(PROGS) $(MPI_PROGS)
@@ -118,5 +118,13 @@ tests/test_string_safety: tests/test_string_safety.c
 tests/test_pos_parsing: tests/test_pos_parsing.c $(MYLIB)
 	@mkdir -p tests
 	$(CC) $(TEST_CFLAGS) -o $@ $< $(LDFLAGS)
+
+tests/test_rs_tables: tests/test_rs_tables.c
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $< -lm
+
+tests/test_data_loaders: tests/test_data_loaders.c
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $< -lm
 
 .PHONY: test clean showinfo prep

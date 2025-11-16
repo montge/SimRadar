@@ -4,10 +4,12 @@ This directory contains unit tests for the SimRadar framework.
 
 ## Test Organization
 
-- `test_string_safety.c` - Tests for buffer overflow fixes and safe string operations
-- `test_pos_parsing.c` - Tests for scan pattern parsing
-- `test_rs_framework.c` - Tests for core RS framework functions (TODO)
-- `test_data_integrity.c` - Tests for data loading and validation (TODO)
+- `test_string_safety.c` - Tests for buffer overflow fixes and safe string operations (9 tests)
+- `test_pos_parsing.c` - Tests for scan pattern parsing (5 tests)
+- `test_rs_tables.c` - Tests for RS data structures, radar parameters, and calculations (13 tests)
+- `test_data_loaders.c` - Tests for data loading error handling and validation (15 tests)
+
+**Total: 42 unit tests**
 
 ## Running Tests
 
@@ -20,10 +22,16 @@ make test
 ### Run Individual Tests
 
 ```bash
-# String safety tests
+# String safety tests (9 tests, no dependencies)
 ./tests/test_string_safety
 
-# Pattern parsing tests
+# RS table and parameter tests (13 tests, no dependencies)
+./tests/test_rs_tables
+
+# Data loader tests (15 tests, no dependencies)
+./tests/test_data_loaders
+
+# Pattern parsing tests (5 tests, requires librs.a)
 ./tests/test_pos_parsing
 ```
 

@@ -32,6 +32,8 @@ test_make_pulse
 test_clreduce
 tests/test_string_safety
 tests/test_pos_parsing
+tests/test_rs_tables
+tests/test_data_loaders
 cldemo
 simradar
 simradar-mpi
