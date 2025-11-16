@@ -67,16 +67,105 @@ typedef struct _les_table {
 } LESTable;
 
 
+/**
+ * @brief Initialize Large Eddy Simulation (LES) data handler with configuration
+ *
+ * Loads LES wind field data from specified path with given configuration.
+ * LES data provides 3D wind velocity (u,v,w) and turbulence fields for
+ * realistic debris transport simulation.
+ *
+ * @param config LES configuration identifier (e.g., "t0_00600")
+ * @param path Directory path containing LES data files
+ * @return LES handle on success, NULL on failure
+ *
+ * @note LES files are typically >1GB. Ensure sufficient memory
+ * @see LES_init(), LES_free()
+ *
+ * @code
+ * LESHandle les = LES_init_with_config_path("t0_00600", "/data/les");
+ * if (les) {
+ *     LESTable *frame = LES_get_frame(les, 0);
+ *     // ... use wind field data
+ *     LES_free(les);
+ * }
+ * @endcode
+ */
 LESHandle LES_init_with_config_path(const LESConfig config, const char *path);
+
+/**
+ * @brief Initialize LES handler with default configuration
+ *
+ * Searches standard paths for LES data and loads default configuration.
+ *
+ * @return LES handle on success, NULL on failure
+ * @see LES_init_with_config_path()
+ */
 LESHandle LES_init(void);
+
+/**
+ * @brief Free LES handle and release resources
+ *
+ * @param handle LES handle to free
+ * @see LES_init()
+ */
 void LES_free(LESHandle);
 
+/**
+ * @brief Enable delayed read mode for memory efficiency
+ *
+ * In delayed read mode, LES frames are loaded on-demand rather than
+ * pre-loaded. This reduces memory usage but increases I/O operations.
+ *
+ * @param handle LES handle
+ */
 void LES_set_delayed_read(LESHandle);
 
+/**
+ * @brief Get initial LES frame without time interpolation
+ *
+ * @param handle LES handle
+ * @param n Frame index
+ * @return Pointer to LES table, or NULL if index out of range
+ * @see LES_get_frame()
+ */
 LESTable *LES_get_frame_0(const LESHandle, const int n);
+
+/**
+ * @brief Get LES frame with time interpolation
+ *
+ * Returns wind field data for specified frame index. If between frames,
+ * performs temporal interpolation for smooth time evolution.
+ *
+ * @param handle LES handle
+ * @param n Frame index (can be fractional for interpolation)
+ * @return Pointer to LES table with (u,v,w,t,cn2,p) fields
+ *
+ * @note Interpolation provides smooth debris motion between frames
+ */
 LESTable *LES_get_frame(const LESHandle, const int n);
+
+/**
+ * @brief Get path to LES data directory
+ *
+ * @param handle LES handle
+ * @return String path to data directory
+ */
 char *LES_data_path(const LESHandle);
+
+/**
+ * @brief Get time period between LES frames
+ *
+ * @param handle LES handle
+ * @return Time period in seconds
+ */
 float LES_get_table_period(const LESHandle);
+
+/**
+ * @brief Get total number of LES frames available
+ *
+ * @param handle LES handle
+ * @return Number of frames
+ */
 size_t LES_get_table_count(const LESHandle);
 
 void LES_show_table_summary(const LESTable *table);

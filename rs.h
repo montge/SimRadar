@@ -370,12 +370,98 @@ int RS_indent_copy(char *dst, char *src, const int width);
 #pragma mark -
 #pragma mark Initialization and Deallocation
 
-// Initializes a simulation space
+/**
+ * @brief Initialize radar simulation with custom path and GPU selection
+ *
+ * Creates and configures a radar simulation handle with specified parameters.
+ * This is the most flexible initialization function, allowing full control over
+ * resource paths, computation method, and GPU selection.
+ *
+ * @param bundle_path Path to data bundle directory containing LES/ADM/RCS tables
+ * @param method Computation method (RS_METHOD_OPENCL_GPU or RS_METHOD_CPU)
+ * @param gpu_mask Bitmask selecting which GPUs to use (e.g., 0x01 for GPU 0, 0x03 for GPUs 0 and 1)
+ * @param sharegroup OpenGL context for visualization (0 for headless operation)
+ * @param verb Verbosity level: 0=quiet, 1=normal, 2=verbose, 3+=debug
+ * @return RSHandle pointer on success, NULL on failure
+ *
+ * @note The returned handle must be freed with RS_free() when done
+ * @see RS_init(), RS_init_verbose(), RS_free()
+ *
+ * @code
+ * RSHandle *sim = RS_init_with_path("/path/to/data", RS_METHOD_OPENCL_GPU, 0x01, 0, 1);
+ * if (sim == NULL) {
+ *     fprintf(stderr, "Failed to initialize simulator\n");
+ *     return -1;
+ * }
+ * // ... use simulator
+ * RS_free(sim);
+ * @endcode
+ */
 RSHandle *RS_init_with_path(const char *bundle_path, RSMethod method, const uint8_t gpu_mask, cl_context_properties sharegroup, const char verb);
+
+/**
+ * @brief Initialize radar simulation with specific GPU selection
+ *
+ * @param gpu_mask Bitmask selecting which GPUs to use
+ * @param verb Verbosity level (0-3+)
+ * @return RSHandle pointer on success, NULL on failure
+ * @see RS_init_with_path()
+ */
 RSHandle *RS_init_for_selected_gpu(const uint8_t gpu_mask, const char verb);
+
+/**
+ * @brief Initialize radar simulation for CPU-only mode with verbosity
+ *
+ * @param verb Verbosity level (0-3+)
+ * @return RSHandle pointer on success, NULL on failure
+ * @see RS_init()
+ */
 RSHandle *RS_init_for_cpu_verbose(const char verb);
+
+/**
+ * @brief Initialize radar simulation with verbosity
+ *
+ * @param verb Verbosity level (0-3+)
+ * @return RSHandle pointer on success, NULL on failure
+ * @see RS_init()
+ */
 RSHandle *RS_init_verbose(const char verb);
+
+/**
+ * @brief Initialize radar simulation with default settings
+ *
+ * Creates a radar simulation handle with default configuration:
+ * - Auto-detects and uses first available GPU (falls back to CPU)
+ * - Searches standard paths for data bundles
+ * - Normal verbosity level
+ *
+ * @return RSHandle pointer on success, NULL on failure
+ *
+ * @note This is the simplest initialization method for most use cases
+ * @see RS_init_verbose(), RS_free()
+ *
+ * @code
+ * RSHandle *sim = RS_init();
+ * if (sim) {
+ *     RS_set_wavelength(sim, 0.10f);  // 10cm S-band
+ *     // ... configure and run simulation
+ *     RS_free(sim);
+ * }
+ * @endcode
+ */
 RSHandle *RS_init(void);
+
+/**
+ * @brief Free radar simulation handle and release all resources
+ *
+ * Deallocates all memory and GPU resources associated with the simulation.
+ * This includes scatter body data, OpenCL buffers, and internal state.
+ *
+ * @param H Radar simulation handle to free (can be NULL)
+ *
+ * @warning After calling this function, the handle becomes invalid and must not be used
+ * @see RS_init()
+ */
 void RS_free(RSHandle *H);
 
 RSMakePulseParams RS_make_pulse_params(const cl_uint count, const cl_uint group_size_multiple, const cl_uint user_group_counts, const cl_uint max_local_mem_size,
@@ -383,15 +469,137 @@ RSMakePulseParams RS_make_pulse_params(const cl_uint count, const cl_uint group_
 #pragma mark -
 #pragma mark Radar and Simulation Parameters
 
+/**
+ * @brief Set simulation concept (tornado, debris, background, etc.)
+ *
+ * @param H Radar simulation handle
+ * @param c Simulation concept type
+ * @see RS_simulation_concept_string()
+ */
 void RS_set_concept(RSHandle *H, RSSimulationConcept c);
+
+/**
+ * @brief Get string representation of current simulation concept
+ *
+ * @param H Radar simulation handle
+ * @return String describing simulation concept
+ */
 char *RS_simulation_concept_string(RSHandle *);
+
+/**
+ * @brief Get bulleted string representation of simulation concept
+ *
+ * @param H Radar simulation handle
+ * @return Multi-line bulleted string with concept details
+ */
 char *RS_simulation_concept_bulleted_string(RSHandle *H);
 
+/**
+ * @brief Set pulse repetition time (PRT)
+ *
+ * Sets the time between consecutive radar pulses. Also automatically
+ * calculates and updates PRF (1/PRT) and Nyquist velocity.
+ *
+ * @param H Radar simulation handle
+ * @param prt Pulse repetition time in seconds (typically 0.001 for 1ms)
+ *
+ * @note PRF = 1/PRT, and Nyquist velocity = λ * PRF / 4
+ * @see RS_set_lambda()
+ *
+ * @code
+ * RS_set_prt(sim, 0.001f);  // 1ms PRT = 1000 Hz PRF
+ * @endcode
+ */
 void RS_set_prt(RSHandle *H, const RSfloat prt);
+
+/**
+ * @brief Set radar wavelength
+ *
+ * Sets the electromagnetic wavelength of the radar. Common values:
+ * - S-band: ~0.10 m (3 GHz)
+ * - C-band: ~0.05 m (6 GHz)
+ * - X-band: ~0.03 m (10 GHz)
+ *
+ * @param H Radar simulation handle
+ * @param lambda Wavelength in meters
+ *
+ * @note Wavelength affects Doppler velocity calculations and Rayleigh scattering
+ * @see RS_set_prt()
+ *
+ * @code
+ * RS_set_lambda(sim, 0.10f);  // S-band (10 cm wavelength)
+ * @endcode
+ */
 void RS_set_lambda(RSHandle *H, const RSfloat lambda);
+
+/**
+ * @brief Set scatter body density
+ *
+ * Sets the average number of scatter bodies per grid cell.
+ * Higher density provides better statistical sampling but increases
+ * computation time.
+ *
+ * @param H Radar simulation handle
+ * @param density Bodies per cell (typical: 1.0 to 10.0)
+ *
+ * @note Total scatter count = density × grid_volume / cell_volume
+ */
 void RS_set_density(RSHandle *H, const RSfloat density);
+
+/**
+ * @brief Set antenna parameters
+ *
+ * Configures the radar antenna characteristics for beam pattern
+ * calculations and radar equation.
+ *
+ * @param H Radar simulation handle
+ * @param beamwidth_deg Half-power beamwidth in degrees (typical: 0.5 to 2.0)
+ * @param gain_dbi Antenna gain in dBi (typical: 40 to 50)
+ *
+ * @note Beamwidth and gain are related: narrower beam = higher gain
+ *
+ * @code
+ * RS_set_antenna_params(sim, 1.0f, 45.0f);  // 1° beamwidth, 45 dBi gain
+ * @endcode
+ */
 void RS_set_antenna_params(RSHandle *H, RSfloat beamwidth_deg, RSfloat gain_dbi);
+
+/**
+ * @brief Set transmitter parameters
+ *
+ * Configures radar transmitter characteristics for power budget
+ * calculations and range resolution.
+ *
+ * @param H Radar simulation handle
+ * @param pulsewidth Pulse width in seconds (typical: 0.5e-6 to 2.0e-6)
+ * @param tx_power_watt Transmit power in watts (typical: 250kW to 1MW)
+ *
+ * @note Range resolution = c × pulsewidth / 2
+ * @note Shorter pulse = better resolution but less energy
+ *
+ * @code
+ * RS_set_tx_params(sim, 1.0e-6f, 500000.0f);  // 1μs pulse, 500kW
+ * @endcode
+ */
 void RS_set_tx_params(RSHandle *H, RSfloat pulsewidth, RSfloat tx_power_watt);
+
+/**
+ * @brief Set sampling gate spacing for all dimensions
+ *
+ * Defines the resolution of the simulated radar data in range,
+ * azimuth, and elevation dimensions.
+ *
+ * @param H Radar simulation handle
+ * @param range Range gate spacing in meters (typical: 30 to 250)
+ * @param azimuth Azimuth gate spacing in degrees (typical: 0.5 to 1.0)
+ * @param elevation Elevation gate spacing in degrees (typical: 0.5 to 1.0)
+ *
+ * @note Finer spacing provides higher resolution but increases computation
+ *
+ * @code
+ * RS_set_sampling_spacing(sim, 30.0f, 1.0f, 1.0f);  // 30m range, 1° angles
+ * @endcode
+ */
 void RS_set_sampling_spacing(RSHandle *H, const RSfloat range, const RSfloat azimuth, const RSfloat elevation);
 void RS_set_scan_box(RSHandle *H, RSBox box);
 void RS_set_scan_extent(RSHandle *H,
