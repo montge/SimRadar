@@ -167,11 +167,16 @@ ADMTable *ADM_get_table(const ADMHandle in, const ADMConfig config) {
     
     // The first two 16-bit numbers are the grid dimensions
     uint16_t nbna[2];
-    fread(nbna, sizeof(uint16_t), 2, fid);
-    
+    size_t items_read = fread(nbna, sizeof(uint16_t), 2, fid);
+    if (items_read != 2) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read grid dimensions from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+
     // Get the table pointer from the handler
     ADMTable *table = &h->table[h->count];
-    
+
     // Populate the dimension details
     table->nb = nbna[0];  // x-axis = beta
     table->na = nbna[1];  // y-axis = alpha
@@ -201,12 +206,42 @@ ADMTable *ADM_get_table(const ADMHandle in, const ADMConfig config) {
     for (i = 0; i < table->na; i++) {
         table->data.a[i] = (float)i / (float)(table->na - 1) * 180.0f;
     }
-    fread(table->data.cdx, sizeof(float), table->nn, fid);
-    fread(table->data.cdy, sizeof(float), table->nn, fid);
-    fread(table->data.cdz, sizeof(float), table->nn, fid);
-    fread(table->data.cmx, sizeof(float), table->nn, fid);
-    fread(table->data.cmy, sizeof(float), table->nn, fid);
-    fread(table->data.cmz, sizeof(float), table->nn, fid);
+    items_read = fread(table->data.cdx, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CDX data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.cdy, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CDY data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.cdz, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CDZ data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.cmx, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CMX data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.cmy, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CMY data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.cmz, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : ADM : Error: Failed to read CMZ data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
     
     h->count++;
     

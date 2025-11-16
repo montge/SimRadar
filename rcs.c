@@ -196,11 +196,16 @@ RCSTable *RCS_get_table(const RCSHandle in, const RCSConfig config) {
 
     // The first two 16-bit numbers are the grid dimensions
     uint16_t nbna[2];
-    fread(nbna, sizeof(uint16_t), 2, fid);
-    
+    size_t items_read = fread(nbna, sizeof(uint16_t), 2, fid);
+    if (items_read != 2) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read grid dimensions from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+
     // Get the table pointer from the handler
     RCSTable *table = &h->table[h->count];
-    
+
     // Populate the dimension details
     table->na = nbna[0];  // x-axis = alpha
     table->nb = nbna[1];  // y-axis = beta
@@ -231,12 +236,42 @@ RCSTable *RCS_get_table(const RCSHandle in, const RCSConfig config) {
     for (i=0; i<table->nb; i++) {
         table->data.b[i] = (float)i / (float)(table->nb - 1) * 180.0f;
     }
-    fread(table->data.hh_real, sizeof(float), table->nn, fid);
-    fread(table->data.vv_real, sizeof(float), table->nn, fid);
-    fread(table->data.hv_real, sizeof(float), table->nn, fid);
-    fread(table->data.hh_imag, sizeof(float), table->nn, fid);
-    fread(table->data.vv_imag, sizeof(float), table->nn, fid);
-    fread(table->data.hv_imag, sizeof(float), table->nn, fid);
+    items_read = fread(table->data.hh_real, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read HH_real data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.vv_real, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read VV_real data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.hv_real, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read HV_real data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.hh_imag, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read HH_imag data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.vv_imag, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read VV_imag data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
+    items_read = fread(table->data.hv_imag, sizeof(float), table->nn, fid);
+    if (items_read != table->nn) {
+        fprintf(stderr, "%s : RCS : Error: Failed to read HV_imag data from file %s\n", now(), fullpath);
+        fclose(fid);
+        return NULL;
+    }
     
     h->count++;
 
