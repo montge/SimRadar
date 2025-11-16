@@ -1,0 +1,126 @@
+name: Static Analysis
+
+on:
+  push:
+    branches: [ main, master, 'claude/**' ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  cppcheck:
+    name: Cppcheck Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --version
+          cppcheck \
+            --enable=warning,style,performance,portability \
+            --suppress=missingIncludeSystem \
+            --inline-suppr \
+            --std=c99 \
+            --verbose \
+            --output-file=cppcheck-report.txt \
+            *.c *.h 2>&1 | tee cppcheck-output.txt || true
+
+      - name: Display results
+        run: |
+          echo "=== Cppcheck Results ==="
+          cat cppcheck-output.txt
+          if [ -f cppcheck-report.txt ]; then
+            cat cppcheck-report.txt
+          fi
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: cppcheck-results
+          path: |
+            cppcheck-output.txt
+            cppcheck-report.txt
+          retention-days: 30
+
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            opencl-headers \
+            ocl-icd-opencl-dev
+
+      - name: Check for unsafe functions
+        run: |
+          echo "=== Checking for unsafe function usage ==="
+          echo ""
+          echo "Checking for strcpy usage:"
+          grep -n "strcpy\s*(" *.c *.h | grep -v "strncpy" || echo "  ✅ No unsafe strcpy found"
+          echo ""
+          echo "Checking for sprintf usage:"
+          grep -n "sprintf\s*(" *.c *.h | grep -v "snprintf" | head -20 || echo "  ✅ No unsafe sprintf found"
+          echo ""
+          echo "Checking for gets usage:"
+          grep -n "gets\s*(" *.c *.h || echo "  ✅ No gets() found"
+          echo ""
+          echo "Checking for system() usage:"
+          grep -n "system\s*(" *.c *.h || echo "  ✅ No system() calls found"
+
+      - name: Check for TODO security markers
+        run: |
+          echo "=== Security TODOs ==="
+          grep -rn "TODO.*SECURITY" . || echo "No security TODOs found"
+          grep -rn "FIXME.*SECURITY" . || echo "No security FIXMEs found"
+
+  build-warnings:
+    name: Build with Maximum Warnings
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            opencl-headers \
+            ocl-icd-opencl-dev
+
+      - name: Build with extra warnings
+        run: |
+          make clean
+          make CFLAGS="-std=gnu99 -Wall -Wextra -Wpedantic -Wformat-security -Wno-unknown-pragmas -Wno-deprecated-declarations -Os -msse2 -mavx -I /usr/local/include -DDEBUG -D_GNU_SOURCE" 2>&1 | tee build-warnings.txt || true
+
+      - name: Analyze warnings
+        run: |
+          echo "=== Build Warning Summary ==="
+          grep -i "warning:" build-warnings.txt | wc -l | xargs echo "Total warnings:"
+          echo ""
+          echo "=== Warning Categories ==="
+          grep -i "warning:" build-warnings.txt | sed 's/.*warning:/warning:/' | sort | uniq -c | sort -rn | head -20
+
+      - name: Upload warning report
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-warnings
+          path: build-warnings.txt
+          retention-days: 30
