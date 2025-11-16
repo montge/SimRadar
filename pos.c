@@ -65,7 +65,9 @@ int POS_parse_from_string(POSPattern *scan, const char *string) {
         rsprint("Expected : after the scan mode character.\n");
         return 1;
     }
-    strcpy(scan_pattern, string + 2);
+    // Safely copy scan pattern with bounds checking
+    strncpy(scan_pattern, string + 2, sizeof(scan_pattern) - 1);
+    scan_pattern[sizeof(scan_pattern) - 1] = '\0';
     scan->mode = string[0];
     switch (scan->mode) {
         case 'p':
