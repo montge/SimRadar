@@ -23,6 +23,13 @@ ref/
 *stdout.txt
 *stderr.txt
 
+# Coverage files
+*.gcda
+*.gcno
+*.gcov
+coverage/
+*.info
+
 # Symbolic links
 o
 simradar-mpi.c

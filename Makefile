@@ -60,6 +60,13 @@ LDFLAGS += -lm -lpthread
 TEST_PROGS = tests/test_string_safety tests/test_pos_parsing tests/test_rs_tables tests/test_data_loaders
 TEST_CFLAGS = $(CFLAGS) -I.
 
+# Coverage flags
+COV_CFLAGS = $(CFLAGS) -I. --coverage -O0 -g
+COV_LDFLAGS = --coverage
+COV_DIR = coverage
+COV_TEST_PROGS = $(addprefix $(COV_DIR)/, $(notdir $(TEST_PROGS)))
+COV_OBJS = $(addprefix $(COV_DIR)/, $(OBJS))
+
 all: $(MYLIB) $(PROGS) $(MPI_PROGS)
 
 showinfo:
@@ -127,4 +134,57 @@ tests/test_data_loaders: tests/test_data_loaders.c
 	@mkdir -p tests
 	$(CC) $(TEST_CFLAGS) -o $@ $< -lm
 
-.PHONY: test clean showinfo prep
+# Coverage targets
+coverage: coverage-build coverage-run coverage-report
+
+coverage-build: $(COV_DIR)/librs.a $(COV_TEST_PROGS)
+
+$(COV_DIR)/librs.a: $(COV_OBJS)
+	@mkdir -p $(COV_DIR) lib
+	ar rcs $@ $^
+
+$(COV_DIR)/%.o: %.c
+	@mkdir -p $(COV_DIR)
+	$(CC) $(COV_CFLAGS) -c -o $@ $<
+
+$(COV_DIR)/test_string_safety: tests/test_string_safety.c
+	@mkdir -p $(COV_DIR)
+	$(CC) $(COV_CFLAGS) -o $@ $< $(COV_LDFLAGS)
+
+$(COV_DIR)/test_rs_tables: tests/test_rs_tables.c
+	@mkdir -p $(COV_DIR)
+	$(CC) $(COV_CFLAGS) -o $@ $< -lm $(COV_LDFLAGS)
+
+$(COV_DIR)/test_data_loaders: tests/test_data_loaders.c
+	@mkdir -p $(COV_DIR)
+	$(CC) $(COV_CFLAGS) -o $@ $< -lm $(COV_LDFLAGS)
+
+$(COV_DIR)/test_pos_parsing: tests/test_pos_parsing.c $(COV_DIR)/librs.a
+	@mkdir -p $(COV_DIR)
+	$(CC) $(COV_CFLAGS) -o $@ $< -L $(COV_DIR) -lrs -lm -lpthread $(COV_LDFLAGS)
+
+coverage-run: coverage-build
+	@echo $(ECHO_FLAG) "\n\033[38;5;46m=== Running Tests with Coverage ===\033[0m\n"
+	@for test in $(COV_TEST_PROGS); do \
+		echo $(ECHO_FLAG) "\033[38;5;220mRunning $$test\033[0m"; \
+		./$$test > /dev/null 2>&1 || true; \
+	done
+	@echo $(ECHO_FLAG) "\033[38;5;46m=== Coverage Data Collected ===\033[0m\n"
+
+coverage-report:
+	@echo $(ECHO_FLAG) "\033[38;5;46m=== Generating Coverage Report ===\033[0m\n"
+	@which lcov > /dev/null 2>&1 && \
+		lcov --capture --directory $(COV_DIR) --directory . --output-file $(COV_DIR)/coverage.info --quiet && \
+		lcov --remove $(COV_DIR)/coverage.info '/usr/*' '*/tests/*' --output-file $(COV_DIR)/coverage_filtered.info --quiet && \
+		genhtml $(COV_DIR)/coverage_filtered.info --output-directory $(COV_DIR)/html --quiet && \
+		echo $(ECHO_FLAG) "\033[38;5;46mCoverage report generated: $(COV_DIR)/html/index.html\033[0m\n" && \
+		lcov --summary $(COV_DIR)/coverage_filtered.info || \
+		echo $(ECHO_FLAG) "\033[38;5;208mWarning: lcov not installed. Install with: sudo apt-get install lcov\033[0m\n"
+
+coverage-clean:
+	rm -rf $(COV_DIR)
+	find . -name "*.gcda" -delete
+	find . -name "*.gcno" -delete
+	find . -name "*.gcov" -delete
+
+.PHONY: test clean showinfo prep coverage coverage-build coverage-run coverage-report coverage-clean

@@ -68,12 +68,47 @@ int main(void) {
 }
 ```
 
-## Test Coverage Goals
+## Code Coverage
 
-- **Phase 1 (Current):** Core security fixes validated
-- **Phase 2:** 30% line coverage
+### Generating Coverage Reports
+
+Run tests with coverage analysis:
+
+```bash
+# Generate coverage report (requires lcov)
+make coverage
+
+# View HTML report
+open coverage/html/index.html  # macOS
+xdg-open coverage/html/index.html  # Linux
+```
+
+The coverage target will:
+1. Build all tests with coverage instrumentation (`--coverage` flag)
+2. Run all tests and collect execution data (`.gcda` files)
+3. Generate HTML report showing line-by-line coverage
+4. Display summary statistics
+
+### Installing lcov
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install lcov
+```
+
+**macOS:**
+```bash
+brew install lcov
+```
+
+### Coverage Goals
+
+- **Phase 1 (Current):** ~15-20% - Core security fixes validated
+- **Phase 2:** 30% line coverage - Core modules tested
 - **Phase 3:** 60% line coverage with integration tests
 - **Phase 4:** 80%+ coverage with comprehensive test suite
+
+Current coverage tracked in CI/CD - see badge in main README.
 
 ## Continuous Integration
 
@@ -82,7 +117,14 @@ Tests are automatically run by GitHub Actions on:
 - Every pull request
 - Weekly scheduled runs
 
-See `.github/workflows/build-and-test.yml` for CI configuration.
+### CI/CD Workflows
+
+- `.github/workflows/build-and-test.yml` - Build and test on multiple platforms
+- `.github/workflows/static-analysis.yml` - Cppcheck static analysis
+- `.github/workflows/codeql.yml` - GitHub CodeQL security scanning
+- `.github/workflows/coverage.yml` - Code coverage measurement and reporting
+
+Coverage reports are generated on every PR and tracked over time.
 
 ## Test Data
 

@@ -1,0 +1,76 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ main, master, 'claude/**' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          opencl-headers \
+          ocl-icd-opencl-dev \
+          lcov
+
+    - name: Build with coverage
+      run: make coverage-build
+
+    - name: Run tests with coverage
+      run: make coverage-run
+
+    - name: Generate coverage report
+      run: make coverage-report
+
+    - name: Display coverage summary
+      run: |
+        echo "=== Coverage Summary ==="
+        lcov --summary coverage/coverage_filtered.info || true
+
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/html/
+        retention-days: 30
+
+    - name: Check coverage threshold
+      run: |
+        # Extract line coverage percentage
+        COVERAGE=$(lcov --summary coverage/coverage_filtered.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//')
+        echo "Current coverage: ${COVERAGE}%"
+
+        # Set minimum coverage threshold (start at 10%, will increase over time)
+        THRESHOLD=10
+
+        if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+          echo "❌ Coverage ${COVERAGE}% is below threshold ${THRESHOLD}%"
+          exit 1
+        else
+          echo "✅ Coverage ${COVERAGE}% meets threshold ${THRESHOLD}%"
+        fi
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage/coverage_filtered.info', 'utf8');
+          const summary = coverage.match(/lines\.*: (\d+\.\d+)%/);
+          const coveragePct = summary ? summary[1] : 'N/A';
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 📊 Coverage Report\n\n**Line Coverage:** ${coveragePct}%\n\n[View detailed report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+          });
