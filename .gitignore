@@ -46,6 +46,8 @@ tests/test_string_safety
 tests/test_pos_parsing
 tests/test_rs_tables
 tests/test_data_loaders
+tests/test_rs_integration
+tests/test_data_integration
 cldemo
 simradar
 simradar-mpi

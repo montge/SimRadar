@@ -4,12 +4,21 @@ This directory contains unit tests for the SimRadar framework.
 
 ## Test Organization
 
-- `test_string_safety.c` - Tests for buffer overflow fixes and safe string operations (9 tests)
-- `test_pos_parsing.c` - Tests for scan pattern parsing (5 tests)
-- `test_rs_tables.c` - Tests for RS data structures, radar parameters, and calculations (13 tests)
-- `test_data_loaders.c` - Tests for data loading error handling and validation (15 tests)
+### Unit Tests (No Dependencies)
+- `test_string_safety.c` - Buffer overflow fixes and safe string operations (9 tests)
+- `test_rs_tables.c` - RS data structures, radar parameters, and calculations (13 tests)
+- `test_data_loaders.c` - Data loading error handling patterns (15 tests)
 
-**Total: 42 unit tests**
+### Integration Tests (Requires OpenCL + Library)
+- `test_pos_parsing.c` - Scan pattern parsing with librs.a (5 tests)
+- `test_rs_integration.c` - RS framework initialization and configuration (13 tests)
+  - **Requires**: OpenCL headers/runtime, librs.a
+  - **GPU Detection**: Skips GPU-dependent tests if no GPU available
+- `test_data_integration.c` - LES/ADM/RCS data loader integration (16 tests)
+  - **Requires**: OpenCL headers/runtime, librs.a, data tables (15GB)
+  - **Data Detection**: Skips tests if data files not found
+
+**Total: 71 tests** (37 unit + 34 integration)
 
 ## Running Tests
 

@@ -57,7 +57,7 @@ endif
 LDFLAGS += -lm -lpthread
 
 # Test programs
-TEST_PROGS = tests/test_string_safety tests/test_pos_parsing tests/test_rs_tables tests/test_data_loaders
+TEST_PROGS = tests/test_string_safety tests/test_pos_parsing tests/test_rs_tables tests/test_data_loaders tests/test_rs_integration tests/test_data_integration
 TEST_CFLAGS = $(CFLAGS) -I.
 
 # Coverage flags
@@ -133,6 +133,14 @@ tests/test_rs_tables: tests/test_rs_tables.c
 tests/test_data_loaders: tests/test_data_loaders.c
 	@mkdir -p tests
 	$(CC) $(TEST_CFLAGS) -o $@ $< -lm
+
+tests/test_rs_integration: tests/test_rs_integration.c $(MYLIB)
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $< $(LDFLAGS)
+
+tests/test_data_integration: tests/test_data_integration.c $(MYLIB)
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $< $(LDFLAGS)
 
 # Coverage targets
 coverage: coverage-build coverage-run coverage-report
