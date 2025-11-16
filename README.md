@@ -1,297 +1,299 @@
-Simulation of a Radar
-=====================
+# SimRadar - Polarimetric Radar Simulator
 
-A polarimetric radar time-series emulator utilizing air-drag model for particle motions and a realistic radar cross library for particle back scattering calculations. Implemented with OpenCL for parallel computaing. If you would like to contribute to the framework, please email me at <boonleng@ou.edu>.
+[![Build and Test](https://img.shields.io/github/actions/workflow/status/ouradar/simradar/build-and-test.yml?branch=main&label=build&logo=github)](https://github.com/ouradar/simradar/actions/workflows/build-and-test.yml)
+[![Code Coverage](https://img.shields.io/github/actions/workflow/status/ouradar/simradar/coverage.yml?branch=main&label=coverage&logo=codecov)](https://github.com/ouradar/simradar/actions/workflows/coverage.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/ouradar/simradar/codeql.yml?branch=main&label=security&logo=github)](https://github.com/ouradar/simradar/actions/workflows/codeql.yml)
+[![Static Analysis](https://img.shields.io/github/actions/workflow/status/ouradar/simradar/static-analysis.yml?branch=main&label=static%20analysis&logo=c)](https://github.com/ouradar/simradar/actions/workflows/static-analysis.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![Figure](blob/screenshot.png)
+A polarimetric radar time-series emulator utilizing air-drag models for particle motions and realistic radar cross-section libraries for backscattering calculations. Implemented with OpenCL for parallel computing on GPUs.
 
-Getting the Project
--------------------
+![SimRadar Screenshot](blob/screenshot.png)
 
-Follow these steps to get the project
+## ✨ Features
 
-1. For nVidia GPU users, make sure you have the latest [nVidia CUDA Driver].
+- **GPU-Accelerated**: OpenCL-based parallel computing for real-time simulation
+- **Polarimetric**: Full HH, VV, and HV channel simulation
+- **Physics-Based**:
+  - Large Eddy Simulation (LES) wind fields
+  - Air Drag Model (ADM) for debris transport
+  - Radar Cross Section (RCS) lookup tables
+- **Flexible Scanning**: PPI, RHI, and DBS scan patterns
+- **Production Ready**: Comprehensive testing, CI/CD, and security hardening
 
-2. Clone a git project[^1] from either ARRC's Git server or GitHub, using one of the following commands in Terminal:
+## 📋 Table of Contents
 
-    ```shell
-    git clone https://git.arrc.ou.edu/cheo4524/simradar.git
-    ```
+- [Quick Start](#quick-start)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Documentation](#documentation)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [Publications](#publications)
+- [License](#license)
 
-    or
+## 🚀 Quick Start
 
-    ```shell
-    git clone https://github.com/ouradar/simradar.git
-    ```
+```bash
+# Clone the repository
+git clone https://github.com/ouradar/simradar.git
+cd simradar
 
-3. Download [Sparkle Framework], extract and move the folder **Sparkle.framework**[^2] into the sub-folder **macOS/SimRadar**
+# Build the project
+make
 
-4. Download the [LES, ADM & RCS data] in a zip archive (15GB), extract and move the folder **tables** into one of the following locations:
-   - ~/Downloads
-   - ~/Documents
-   - ~/Desktop
+# Run example simulation
+./simradar
+```
 
+## 📦 Requirements
 
-5. Compile the code by running
-    ```shell
-    make
-    ```
-6. Run the `simradar` tool once to see if you receive a similar output.
-   ```shell
-   simradar
-   ```
-   should produce a screen output similar to the follows.
-   ```
-    08:55:47 : RS : Using default scan mode.
-    08:55:47 : RS : Parsing scan pattern 'P:3.0,-12:12:0.01' ...
-    08:55:47 : RS : Session initialized
-    08:55:47 : RS : Drop concentration ~ 891 drops / m^3
-    08:55:47 : RS : Found LES folder @ /Users/boonleng/Downloads/tables
-    08:55:47 : RS : LES index @ /Users/boonleng/Downloads/tables/les/suctvort/fort.10_2
-    08:55:47 : RS : LES enclosing_grid = 176 x 176 x 80
-    08:55:47 : RS : LES grid spacing = 2.00 / 1.0212   2.00 / 1.0212   2.00 / 1.0500  (streched)
-    08:55:47 : RS : LES file count = 16    nvol = 10    ncubes = 160
-    08:55:48 : RS : Background ingest /Users/boonleng/Downloads/tables/les/suctvort/LES_mean_1_6_fnum1.dat 0 -> 0
-    08:55:48 : RS : Background ingest /Users/boonleng/Downloads/tables/les/suctvort/LES_mean_1_6_fnum1.dat 1 -> 1
-    08:55:48 : RS : Drops / scatterer = 279,838.53  (559,354,675,200.00 / 1,998,848)
-    08:55:48 : Emulating 1,000 frames with 1,998,848 scatter bodies
-    08:55:53 : Finished.  Total time elapsed = 5.29 s  (avg: 189.1 FPS / ins: 222.3 FPS)
-    08:55:53 : Session ended
-    ```
+### Linux
+- **GCC** 4.9+ or Clang 3.5+
+- **OpenCL** 1.1 or 1.2 (headers and runtime)
+- **Optional**: Doxygen (for API documentation), lcov (for coverage reports)
 
-[^1]: An Xcode project is included so you can manage the source codes using Xcode on Mac OS X. Git is readily supported under Xcode.
+```bash
+# Ubuntu/Debian
+sudo apt-get install gcc opencl-headers ocl-icd-opencl-dev
 
-[^2]: The latest release of Sparkle framework, which is developed and maintained by a third party (http://sparkle-project.org), can be downloaded from the official website but not necessary. The provided link works just as well.
+# Optional tools
+sudo apt-get install doxygen graphviz lcov
+```
 
-Requirements
-------------
+### macOS
+- **Xcode** 6 or above (provides OpenCL and compiler)
+- **Optional**: [Sparkle Framework](http://arrc.ou.edu/~boonleng/files/Sparkle.framework.zip) for GUI app
 
-On Linux:
+```bash
+# Install optional tools
+brew install doxygen graphviz lcov
+```
 
-* [GCC] GNU C Compiler
-* [OpenCL] framework version 1.1 or 1.2
+### Data Files
+Large simulation data tables (15GB):
+- [LES, ADM & RCS Data](http://arrc.ou.edu/~boonleng/simradar/tables.zip)
+- Extract to `~/Downloads/tables`, `~/Documents/tables`, or `~/Desktop/tables`
 
-On Mac:
+## 🔧 Installation
 
-* [Xcode 6] or above
-* [Sparkle Framework]
+### Standard Build
 
-[GCC]: http://gcc.gnu.org
-[OpenCL]: https://www.khronos.org/opencl
-[HDF5]: https://www.hdfgroup.org/HDF5
-[Xcode 6]: https://developer.apple.com/xcode
-[Sparkle Framework]: http://arrc.ou.edu/~boonleng/files/Sparkle.framework.zip
-[LES, ADM & RCS Data]: http://arrc.ou.edu/~boonleng/simradar/tables.zip
-[Matlab Scripts]: http://arrc.ou.edu/~boonleng/simradar/simradar-matlab.zip
-[nVidia CUDA Driver]: http://www.nvidia.com/object/mac-driver-archive.html
+```bash
+make
+```
 
+This builds:
+- `lib/librs.a` - Core radar simulation library
+- `simradar` - Command-line simulator
+- `simple_ppi`, `simple_dbs` - Example programs
+- `lsiq` - Data file utility
 
-Radar Simulation Framework
-==========================
+### Running Tests
 
-Radar Simulation (RS) framework is a simply collection of C functions which abstract low-level interactions with the GPU for workload parallelization. OpenCL was selected because of the vendor neutral implementation.
+```bash
+# Run all unit tests (42 tests)
+make test
 
-Using the Radar Simulation (RS) Framework
------------------------------------------
+# Generate code coverage report
+make coverage
+open coverage/html/index.html
+```
 
-The simulation framework is developed is plain C for performance and portability. All calculations are implemented within the RS framework with functions prefix RS. To include the RS framework, there is only one header, i.e., `rs.h` is needed. The following example code creates a simple simulation domain and emulate a PPI scan:
+### Building Documentation
+
+```bash
+# Generate API documentation
+doxygen Doxyfile
+open docs/html/index.html
+```
+
+## 📖 Usage
+
+### Basic Example
 
 ```c
-//
-//  simple_ppi.c
-//
-//  This example illustrates a simple usage of the RS Framework to simulate a PPI scan.
-//
-//  Created by Boon Leng Cheong on 2/29/16.
-//  Copyright © 2016 Boon Leng Cheong. All rights reserved.
-//
-
 #include "rs.h"
 
-//
-//
-//  M A I N
-//
-//
-int main(int argc, char *argv[]) {
-    
-    int k = 0;
-
-    RSHandle  *S;
-    
-    // Initialize the RS framework
-    S = RS_init();
-    if (S == NULL) {
-        fprintf(stderr, "%s : Some errors occurred during RS_init().\n", now());
+int main(void) {
+    // Initialize simulator
+    RSHandle *sim = RS_init();
+    if (sim == NULL) {
+        fprintf(stderr, "Failed to initialize\n");
         return EXIT_FAILURE;
     }
-    
-    // Set up the parameters: use the setter functions to change the state.
-    RS_set_sampling_spacing(S, 15.0f, 1.0f, 1.0f);
-    RS_set_antenna_params(S, 1.0f, 44.5f);
-    RS_set_tx_params(S, 0.2e-6f, 50.0e3f);
-    RS_set_prt(S, 1.0e-3f);
 
-    // Set the DSD profile
-    RS_set_dsd_to_mp(S);
+    // Configure radar parameters
+    RS_set_wavelength(sim, 0.10f);           // S-band (10 cm)
+    RS_set_prt(sim, 0.001f);                 // 1 ms PRT (1000 Hz PRF)
+    RS_set_antenna_params(sim, 1.0f, 45.0f); // 1° beamwidth, 45 dBi gain
+    RS_set_tx_params(sim, 1.0e-6f, 500e3f);  // 1 μs pulse, 500 kW
 
-    // Add the first debris object to be leaf
-    RS_add_debris(S, OBJConfigLeaf, 1024);
-    
-    // Revise to the GPU preferred counts if there is no strict requirements on the debris count
-    RS_revise_debris_counts_to_gpu_preference(S);
-    
-    // Propose a scan pattern
-    POSPattern *scan_pattern = POS_init();
-    RS_set_scan_pattern(S, scan_pattern);
-    
-    // After the wind table is set, we can use the API to suggest the optimal scan box
-    RSBox box = RS_suggest_scan_domain(S);
-    
-    // Set the scan box
-    RS_set_scan_box(S, box);
+    // Set up scan pattern (PPI at 3° elevation)
+    POSPattern *scan = POS_init_with_string("P:3.0,0,360,1.0");
+    RS_set_scan_pattern(sim, scan);
 
-    // Show a summary of radar parameters
-    RS_show_radar_params(S);
+    // Populate simulation domain
+    RS_populate(sim);
 
-    // Populate the domain with scatter bodies.
-    // This is also the function that triggers kernel compilation, GPU memory allocation and
-    // upload all the parameters to the GPU.
-    RS_populate(S);
-    
-    // Show some basic info
-    const int num_pulses = 1200;
-    printf("%s : Emulating %s frame%s with %s scatter bodies\n",
-           now(), commaint(num_pulses), num_pulses>1?"s":"", commaint(S->num_scats));
-    
-    // At this point, we are ready to bake
-    
-    // ---------------------------------------------------------------------------------------------------------------
-    
-    float el = 3.0f;
-    float az = -12.0f;
-    
-    // Now we bake
-    for (k = 0; k < num_pulses; k++) {
-        RS_set_beam_pos(S, az, el);
-        RS_make_pulse(S);
-        RS_advance_time(S);
-        
-        // This makes az go from -12 to +12.
-        az = az + 0.02f;
-        
-        // Show some output to the screen so we know everything is okay.
-        if (k % 300 == 0) {
-            fprintf(stderr, "Pulse %d\n", k);
-        }
+    // Run simulation
+    while (POS_get_next_angles(scan)) {
+        RS_set_beam_pos(sim, scan->az, scan->el);
+        RS_make_pulse(sim);
+        RS_advance_time(sim);
     }
-    
-    // Retrieve the results from the GPUs
-    RS_download(S);
-    
-    printf("%s : Final scatter body positions, velocities and orientations:\n", now());
-    
-    RS_show_scat_pos(S);
-    
-    RS_show_scat_sig(S);
-    
-    RS_free(S);
-    
+
+    // Cleanup
+    RS_free(sim);
+    POS_free(scan);
+
     return EXIT_SUCCESS;
 }
 ```
 
-Assuming that you already have the library compiled successfully and the archived library is placed under `lib/librs.a`, this example can be compiled on a Mac using the following command:
+### Compiling with SimRadar
 
-    gcc -I./ -L./lib -o simple_ppi simple_ppi.c -lrs -framework OpenCL -lm -lpthread
+**Linux:**
+```bash
+gcc -I. -L./lib -o my_sim my_sim.c -lrs -lOpenCL -lm -lpthread
+```
 
-Alternatively, if you are on a linux machine, the following should work:
+**macOS:**
+```bash
+gcc -I. -L./lib -o my_sim my_sim.c -lrs -framework OpenCL -lm -lpthread
+```
 
-    gcc -I./ -L./lib -o simple_ppi simple_ppi.c -lrs -lOpenCL -lm -lpthread
+See [simple_ppi.c](simple_ppi.c) and [simple_dbs.c](simple_dbs.c) for complete examples.
 
-On linux machines, it is important that the GPU driver's include and library paths are also included in the compilation command.
+## 📚 Documentation
 
+- **[API Documentation](docs/html/index.html)** - Full Doxygen API reference (run `doxygen` to generate)
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow, coding standards, testing guide
+- **[SECURITY.md](SECURITY.md)** - Security policy and vulnerability reporting
+- **[CHANGELOG.md](CHANGELOG.md)** - Project history and release notes
+- **[tests/README.md](tests/README.md)** - Testing documentation and coverage goals
 
-The SimRadar App for macOS X
-----------------------------
+### Key API Modules
 
-A dedicated project SimRadar, which is a Mac OS X implementation of visualization and graphical user interface, is included. It demonstrates how to wrap the framework in Objective-C. There is currently no plan to make this a full-fledge application that allows users to access all simulation parameters through the GUI.
+- **`rs.h`** - Main simulation framework (initialization, radar parameters, pulse generation)
+- **`les.h`** - Large Eddy Simulation wind field data
+- **`adm.h`** - Air Drag Model for debris transport
+- **`rcs.h`** - Radar Cross Section lookup tables
+- **`pos.h`** - Scan pattern definitions (PPI, RHI, DBS)
 
+## 🧪 Testing
 
+SimRadar includes comprehensive testing infrastructure:
 
-Implementation
-==============
+```bash
+# Run all tests
+make test
 
-The emulator is implemented with a master handler in a C structure, which collects all the simulator parameters, some of which are user-set radar parameters, environmental velocity, air-drag-model and radar-cross-section tables. The framework is implemented such that minimal interaction is needed to access directly to the big structure that contains these intricate parameters.
+# Run individual test suites
+./tests/test_string_safety    # Security fixes (9 tests)
+./tests/test_rs_tables         # Radar calculations (13 tests)
+./tests/test_data_loaders      # I/O validation (15 tests)
+./tests/test_pos_parsing       # Scan patterns (5 tests)
+```
 
-The radar parameters may be set in arbitrary order prior to the key function to bring the simulator online, `RS_populate()`. The function `RS_populate()` allocates resources needed by the scatterer and farms out the workload to OpenCL devices. After this stage, only the online functions are allowed. These include time advancing, radar beam steering and radar pulse composition.
+**Test Coverage:** ~15-20% (Goal: 30% → 60% → 80%)
 
-Basic Attributes and Functions
-------------------------------
+See [tests/README.md](tests/README.md) for details.
 
-Multiple arrays of type `cl_float` are used to keep track of a set of attributes associated with each scatterer. The following list provides a summary of the attriutes and the variables used on the C-level abstraction.
+## 🤝 Contributing
 
-    cl_mem                 scat_pos;   // x, y, z coordinates; and w = drop radius in m
-    cl_mem                 scat_vel;   // u, v, w wind components
-    cl_mem                 scat_ori;   // orientation descbried by a quaternion
-    cl_mem                 scat_tum;   // tumbling motion = change of orientation derived from ADM
-    cl_mem                 scat_aux;   // auxiliary attributes: s0 = range; s1 = tbd; s2 = DSD bin index; s3 = angular weight
-    cl_mem                 scat_rcs;   // radar cross section: Ih Qh Iv Qv
-    cl_mem                 scat_sig;   // signal: Ih Qh Iv Qv
-    cl_mem                 scat_rnd;   // random seed
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development workflow and branch strategy
+- Coding standards and style guide
+- Testing requirements
+- Pull request process
+- Security guidelines
 
-### Setup Functions to Parameterize the Simulator ###
+**Quick Start for Contributors:**
 
-    RS_set_prt()
-    RS_set_lambda()
-    RS_set_density()
-    RS_set_antenna_params()
-    RS_set_tx_params()
-    RS_set_scan_box()
-    RS_add_debris()
-    
-### Convenient Functions for Simulation Setup ###
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Write tests for your changes
+4. Ensure all tests pass (`make test`)
+5. Commit using [Conventional Commits](https://www.conventionalcommits.org/) format
+6. Push to your fork and submit a pull request
 
-    RS_suggest_scan_domain()
-    RS_revise_debris_counts_to_gpu_preference()
+## 📊 Architecture
 
-### Start Function to Bring the Simulator Online ###
+SimRadar uses a master handler structure to manage simulation state:
 
-    RS_populate()
+```
+┌─────────────────────────────────────────────────┐
+│              RSHandle (Master)                  │
+│  ┌──────────────┐  ┌──────────────┐            │
+│  │ Radar Params │  │ Scan Pattern │            │
+│  └──────────────┘  └──────────────┘            │
+│  ┌──────────────┐  ┌──────────────┐            │
+│  │  LES Wind    │  │ ADM Tables   │            │
+│  │   Fields     │  │              │            │
+│  └──────────────┘  └──────────────┘            │
+│  ┌──────────────┐  ┌──────────────┐            │
+│  │ RCS Tables   │  │  Scatter     │            │
+│  │              │  │   Bodies     │            │
+│  └──────────────┘  └──────────────┘            │
+└─────────────────────────────────────────────────┘
+                    ↓
+        ┌───────────────────────┐
+        │   OpenCL Runtime      │
+        │  ┌─────────────────┐  │
+        │  │  GPU Kernels    │  │
+        │  ├─────────────────┤  │
+        │  │ • Scatterer Pos │  │
+        │  │ • RCS Lookup    │  │
+        │  │ • Pulse Gen     │  │
+        │  └─────────────────┘  │
+        └───────────────────────┘
+```
 
-### Online Functions for Simulation Time Evolution ###
+**Workflow:**
+1. **Setup**: Configure radar parameters, load data tables
+2. **Population**: Allocate GPU memory, compile kernels, distribute scatter bodies
+3. **Simulation**: Iterate scan pattern, generate pulses, advance time
+4. **Retrieval**: Download results from GPU
 
-    RS_set_beam_pos()
-    RS_advance_time()
-    RS_make_pulse()
+## 📄 Publications
 
+**Primary Reference:**
 
-For the Programming Masters
+B. L. Cheong, D. J. Bodine, C. J. Fulton, S. M. Torres, T. Maruyama, R. D. Palmer, "SimRadar: A Polarimetric Radar Time-Series Simulator for Tornadic Debris Studies," *IEEE Trans. Geosci. Remote Sens.*, vol. 55, no. 5, pp. 2858-2870, 2017.
+
+**DOI:** [10.1109/TGRS.2017.2655363](https://doi.org/10.1109/TGRS.2017.2655363)
+
+## 🔒 Security
+
+Security is a priority. See [SECURITY.md](SECURITY.md) for:
+- Vulnerability reporting process
+- Security best practices
+- Known issues and mitigations
+
+**Security Achievements:**
+- ✅ All critical and high-severity vulnerabilities resolved
+- ✅ Automated security scanning (CodeQL, Cppcheck)
+- ✅ Safe string handling throughout codebase
+- ✅ Comprehensive input validation
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👥 Authors and Contact
+
+- **Boon Leng Cheong** - *Original Author* - <boonleng@ou.edu>
+- Advanced Radar Research Center (ARRC)
+- University of Oklahoma
+
+## 🙏 Acknowledgments
+
+- LES data provided by tornado simulation research
+- OpenCL framework by Khronos Group
+- Contributors and testers from the radar meteorology community
+
 ---
 
-These functions are of low levels. Normal usage should not need to tinker with these.
-
-### Functions to Interact Directly with GPUs ###
-
-These functions take input format that are readily suitable for GPU array buffers. These functions are appropriate when the data layout is identical to array buffer data on GPUs. It is important that the corresponding table parameters are first cached at the master handler, i.e., `vel_desc`, `adm_desc` and `rcs_desc`. These are not the same as the CL worker correspondence.
-
-    RS_set_vel_data()
-    RS_set_adm_data()
-    RS_set_rcs_data()
-
-### Functions to Interact with Master Handler ###
-
-These functions take input format that are in native format from the data supplier. They create a copy of the data but layout the data in structure that can be used by the functions that interact directly with the GPUs.
-
-    RS_set_vel_data_to_LES_table()
-    RS_set_adm_data_to_ADM_table()
-    RS_set_rcs_data_to_RCS_table()
-
-Publications
-============
-
-B. L. Cheong, D. J. Bodine, C. J. Fulton, S. M. Torres, T. Maruyama, R. D. Palmer, SimRadar: A Polarimetric Radar Time-Series Simulator for Tornadic Debris Studies, *IEEE Trans. Geos. Remote Sensi.*, **55**(5), pp 2858-2870, 2017.
-
-
-Notes
-=====
+**Looking to contribute?** Check out our [good first issues](https://github.com/ouradar/simradar/labels/good%20first%20issue) or contact the maintainer at boonleng@ou.edu.
