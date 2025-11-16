@@ -56,6 +56,10 @@ endif
 
 LDFLAGS += -lm -lpthread
 
+# Test programs
+TEST_PROGS = tests/test_string_safety tests/test_pos_parsing
+TEST_CFLAGS = $(CFLAGS) -I.
+
 all: $(MYLIB) $(PROGS) $(MPI_PROGS)
 
 showinfo:
@@ -94,4 +98,25 @@ prep: simradar-mpi.c
 clean:
 	rm -f $(OBJS_PATH)/*.o *.a
 	rm -f $(MYLIB) $(PROGS) $(MPI_PROGS)
+	rm -f $(TEST_PROGS)
 	rm -rf *.dSYM
+
+# Test targets
+test: $(TEST_PROGS)
+	@echo $(ECHO_FLAG) "\n\033[38;5;46m=== Running Unit Tests ===\033[0m\n"
+	@for test in $(TEST_PROGS); do \
+		echo $(ECHO_FLAG) "\033[38;5;220mRunning $$test\033[0m"; \
+		./$$test || exit 1; \
+		echo ""; \
+	done
+	@echo $(ECHO_FLAG) "\033[38;5;46m=== All Tests Passed ===\033[0m\n"
+
+tests/test_string_safety: tests/test_string_safety.c
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $<
+
+tests/test_pos_parsing: tests/test_pos_parsing.c $(MYLIB)
+	@mkdir -p tests
+	$(CC) $(TEST_CFLAGS) -o $@ $< $(LDFLAGS)
+
+.PHONY: test clean showinfo prep
