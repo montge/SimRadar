@@ -30,6 +30,11 @@ ref/
 coverage/
 *.info
 
+# Documentation
+docs/
+html/
+latex/
+
 # Symbolic links
 o
 simradar-mpi.c

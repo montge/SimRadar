@@ -460,6 +460,54 @@ Update docs when you:
 - Explain "why" not just "what"
 - Keep updated with code changes
 
+### API Documentation
+
+Generate API documentation with Doxygen:
+
+```bash
+# Install Doxygen
+sudo apt-get install doxygen graphviz  # Ubuntu/Debian
+brew install doxygen graphviz          # macOS
+
+# Generate documentation
+doxygen Doxyfile
+
+# View documentation
+open docs/html/index.html  # macOS
+xdg-open docs/html/index.html  # Linux
+```
+
+Documentation is generated from:
+- Header file comments (`.h` files)
+- Function documentation blocks
+- Structure and type definitions
+- README, CONTRIBUTING, and SECURITY files
+
+**Doxygen comment style:**
+
+```c
+/**
+ * @brief Brief description of function
+ *
+ * Detailed description explaining what the function does,
+ * any important algorithmic details, and usage notes.
+ *
+ * @param param1 Description of first parameter
+ * @param param2 Description of second parameter
+ * @return Description of return value
+ *
+ * @note Any important notes or warnings
+ * @see Related functions
+ *
+ * Example usage:
+ * @code
+ * RSHandle *handle = RS_init();
+ * RS_set_wavelength(handle, 0.10f);
+ * @endcode
+ */
+ReturnType function_name(Type param1, Type param2);
+```
+
 ---
 
 ## Code Review Guidelines
