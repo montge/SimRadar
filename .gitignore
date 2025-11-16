@@ -28,7 +28,10 @@ o
 simradar-mpi.c
 
 # Programs
-test_*
+test_make_pulse
+test_clreduce
+tests/test_string_safety
+tests/test_pos_parsing
 cldemo
 simradar
 simradar-mpi
